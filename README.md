@@ -1,233 +1,155 @@
-# News Dataset Analysis - Data Mining Project
+# News-Lens: Automated News Analysis Pipeline
 
 ## Project Overview
-This project analyzes news articles from two major Pakistani news sources (Dawn and Tribune) spanning from January 2020 to July 2023.
+
+News-Lens is a modular and extensible data pipeline designed for in-depth analysis of news articles. Initially developed for Pakistani news sources (Dawn and Tribune), it aims to uncover hidden insights by processing raw news data through various stages, including advanced natural language processing techniques like sentiment analysis and topic modeling.
+
+This tool is built with a journalist's perspective in mind, allowing the analysis of new, unseen news sources to understand their editorial focus, sentiment, and key themes, potentially revealing biases or unique coverages compared to a baseline.
+
+## Features
+
+*   **Data Ingestion:** Loads news articles from specified CSV files (Dawn and Tribune).
+*   **Base Preprocessing:** Cleans and normalizes article categories for consistent analysis.
+*   **Sentiment Analysis:** Utilizes state-of-the-art Flair models to determine the emotional tone (polarity) of news descriptions. Highly optimized for GPU usage.
+*   **Topic Modeling:** Employs BERTopic to automatically discover and visualize latent topics and themes within the news content.
+*   **Intelligent Caching:** Skips time-consuming reprocessing steps if intermediate results are already available, significantly speeding up subsequent runs.
+*   **Modular Design:** Each stage (ingestion, preprocessing, sentiment, topic modeling) is a separate, reusable component.
+*   **Granular Control:** Offers fine-grained control over which analysis steps to run via command-line flags.
+*   **Comprehensive Visualizations:** Generates various charts and interactive reports for key insights into story length, source/category distribution, temporal trends, sentiment, and discovered topics.
 
 ## Project Structure
+
 ```
-DataMiningProject/
-├── pipeline.py              # Main pipeline orchestrator
-├── src/
-│   ├── config.py           # Configuration settings
-│   ├── ingest.py           # Stage 1: Data ingestion
-│   ├── preprocess.py       # Stage 2: Preprocessing & normalization
-│   └── visualize.py        # Stage 3: Visualization
+.
+├── main.py                     # Entry point for the main pipeline (deprecated)
+├── pipeline.py                 # Primary orchestrator for the modular analysis pipeline
+├── PROJECT_STRUCTURE.md        # High-level project architecture documentation
+├── README.md                   # This file
+├── requirements.txt            # Python dependencies
+├── .git/                       # Git version control
+├── DMProject/                  # Python virtual environment
+├── experiments/                # Scripts for ad-hoc analysis and testing
+│   ├── analyze_data.py
+│   ├── clean_categories.py
+│   ├── complete_analysis.py
+│   ├── data_preprocessing.py
+│   └── visualizations.py
+│   └── topic_modeling.py       # (Legacy) Topic modeling script, now integrated via src/topic_modeling.py
 ├── outputs/
-│   └── figures/            # Generated visualizations
-├── experiments/            # Ad-hoc analysis scripts
-├── combined_news_data_cleaned.csv  # Processed dataset
-└── README.md
+│   ├── figures/                # Stores generated PNG visualization charts
+│   └── topic_modeling/         # Stores BERTopic models and interactive HTML visualizations
+├── src/                        # Core source code modules
+│   ├── __init__.py
+│   ├── config.py               # Configuration settings (data paths, top categories)
+│   ├── ingest.py               # Stage 1: Data ingestion (loads raw CSVs)
+│   ├── preprocess.py           # Stage 2: Base preprocessing (category cleaning)
+│   ├── sentiment_analysis.py   # Module for Flair-based sentiment analysis
+│   ├── topic_modeling.py       # Module for BERTopic-based topic modeling
+│   └── visualize.py            # Stage 3: Visualization generation
+└── data/                       # Directory for raw data files
+    └── raw/                    # Subdirectory for raw input CSVs (Dawn and Tribune)
+        ├── dawn.csv
+        └── tribune.csv
 ```
 
-## Dataset Summary
-- **Total Articles**: 138,664 news articles
-- **Sources**:
-  - Tribune: 93,596 articles
-  - Dawn: 45,068 articles
-- **Date Range**: January 1, 2020 - July 19, 2023
-- **Duration**: 43 months
+## Setup
 
-## Data Preprocessing
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your_repo/your_project.git
+    cd your_project
+    ```
 
-### 1. Data Concatenation
-- Combined Dawn and Tribune datasets into a single dataframe
-- Removed 91 empty "Unnamed" columns from Dawn dataset
-- Standardized column structure across both sources
+2.  **Prepare your data:**
+    Place your `dawn.csv` and `tribune.csv` files into the `data/raw/` directory.
 
-### 2. Category Normalization
-Applied comprehensive category mapping to reduce **558 → 53 unique categories**:
+3.  **Install Python Dependencies (Crucial for GPU Acceleration):**
+    First, ensure you have a compatible Python version (3.9+ recommended).
+    
+    **A. Install PyTorch with CUDA (Highly Recommended for Performance):**
+    `flair` and `BERTopic` leverage PyTorch. For significant speedup, especially for sentiment analysis and topic modeling, install the GPU-enabled version of PyTorch if you have an NVIDIA GPU.
+    *   **Uninstall any existing PyTorch (CPU-only) installation first:**
+        ```bash
+        pip uninstall torch
+        ```
+    *   **Visit the official PyTorch website:** Go to [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)
+    *   **Select your system configuration:** Choose your OS, Package (pip), Language (Python), and most importantly, your CUDA version (e.g., CUDA 11.8, CUDA 12.1).
+    *   **Run the generated installation command:** The website will provide a specific `pip install` command (e.g., `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`). Execute this command.
 
-**Key Mappings:**
-- `Sport` / `sport` / `sports` → `Sports`
-- `Tech` → `Technology`
-- `Film` / `TV` / `Music` / `Gossip` / `Life & Style` → `Entertainment`
-- Multi-categories (comma-separated) → First category only
-- Long text (>50 chars, parsing errors) → `Unknown`
+    **B. Install remaining dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+    This will install `flair`, `bertopic`, pandas, and other libraries.
 
-### 3. Top 6 Categories Selected
-For detailed analysis, we focused on the top 6 categories:
-1. **Pakistan** - 40,991 articles (34.30%)
-2. **World** - 27,518 articles (23.03%)
-3. **Sports** - 19,601 articles (16.40%)
-4. **Business** - 16,468 articles (13.78%)
-5. **Entertainment** - 9,081 articles (7.60%)
-6. **Technology** - 5,834 articles (4.88%)
+## How to Run the Pipeline
 
-## Visualizations Created
+The `pipeline.py` script is the main entry point and offers flexible execution options.
 
-### 4.3 Story Length by Category (Boxplot)
-**File**: `story_length_boxplot.png`
+**Basic Usage:**
 
-**Description**:
-- X-axis: Category
-- Y-axis: Story length (word count)
-- Shows median, quartiles, and mean (red diamond) for each category
+*   **Run with default settings (loads from cache, runs sentiment if missing, skips topics):**
+    ```bash
+    python pipeline.py
+    ```
 
-**Key Findings**:
-- **Pakistan** articles are longest: Median = 422 words, Mean = 496 words
-- **Technology** articles are shortest: Median = 299 words, Mean = 356 words
-- Business and Pakistan categories show similar length patterns
-- Sports and World categories have tighter distributions (lower variability)
+*   **Run on a smaller sample (e.g., 5000 articles) for faster testing/development:**
+    ```bash
+    python pipeline.py --sample_size 5000
+    ```
 
-| Category | Median | Mean | Std Dev |
-|----------|--------|------|---------|
-| Pakistan | 422 | 496 | 352 |
-| World | 372 | 427 | 242 |
-| Sports | 379 | 425 | 203 |
-| Business | 425 | 478 | 255 |
-| Entertainment | 366 | 435 | 237 |
-| Technology | 299 | 356 | 221 |
+**Advanced Usage with Flags:**
 
-### 4.4 Source × Category Heatmap
-**File**: `source_category_heatmap.png`
+*   **Force re-running base data ingestion and category cleaning (and all subsequent steps):**
+    ```bash
+    python pipeline.py --force_reprocess_base
+    ```
 
-**Description**:
-- Crosstab showing article distribution across sources and categories
-- Darker colors indicate higher article counts
-- Annotated with exact counts
+*   **Force re-running sentiment analysis (even if columns exist) on the full dataset:**
+    ```bash
+    python pipeline.py --force_reprocess_sentiment
+    ```
 
-**Key Findings**:
-- Dawn has **NO** Entertainment or Technology coverage in this dataset
-- Dawn focuses heavily on Pakistan news (53.34% of their articles)
-- Tribune has more balanced category distribution
-- Tribune dominates Sports coverage (16,065 vs 3,536)
+*   **Run topic modeling (this is skipped by default, can be slow):**
+    ```bash
+    python pipeline.py --run_topic_modeling
+    ```
 
-**Distribution by Source**:
+*   **Combine flags (e.g., re-run sentiment and run topics on a sample):**
+    ```bash
+    python pipeline.py --sample_size 10000 --force_reprocess_sentiment --run_topic_modeling
+    ```
 
-| Source | Pakistan | World | Sports | Business | Entertainment | Technology |
-|--------|----------|-------|--------|----------|---------------|------------|
-| Dawn | 21,127 (53.34%) | 9,788 (24.71%) | 3,536 (8.93%) | 5,156 (13.02%) | 0 (0%) | 0 (0%) |
-| Tribune | 19,864 (24.87%) | 17,730 (22.19%) | 16,065 (20.11%) | 11,312 (14.16%) | 9,081 (11.37%) | 5,834 (7.30%) |
+*   **To run everything from scratch on a full dataset:**
+    ```bash
+    python pipeline.py --force_reprocess_base --force_reprocess_sentiment --run_topic_modeling
+    ```
 
-### 4.5 Temporal Trend Line Plot
-**File**: `temporal_trend_lineplot.png`
+## Outputs
 
-**Description**:
-- Monthly article counts for each category over time
-- X-axis: Month (Jan 2020 - Jul 2023)
-- Y-axis: Article count
-- Legend placed below the chart
+The pipeline generates the following:
 
-**Key Findings**:
-- Pakistan news maintains highest volume throughout (avg 953 articles/month)
-- Significant spike in Pakistan coverage during certain political events
-- Sports coverage shows seasonal variations
-- Technology coverage remains relatively stable and low
-- Entertainment shows steady moderate coverage (avg 211 articles/month)
+*   **Processed Data:** A CSV file (`combined_news_data_cleaned.csv` or `combined_news_data_cleaned_sample_XXXX.csv`) in the root directory containing the enriched dataset with cleaned categories, sentiment polarity, and topic assignments (if run).
+*   **Visualization Figures:** PNG images in the `outputs/figures/` directory, including:
+    *   `story_length_boxplot.png`
+    *   `source_category_heatmap.png`
+    *   `temporal_trend_lineplot.png`
+    *   `sentiment_polarity_distribution.png`
+    *   `avg_sentiment_by_category.png`
+    *   `avg_sentiment_by_source.png`
+*   **Topic Modeling Reports:** Interactive HTML files and the trained BERTopic model in the `outputs/topic_modeling/` directory, including:
+    *   `bertopic_model` (saved BERTopic model)
+    *   `bertopic_topics_2d.html` (interactive 2D topic map)
+    *   `bertopic_top_words_barchart.html` (interactive bar charts of top words per topic)
 
-**Average Monthly Article Count**:
-- Pakistan: 953.3 articles/month
-- World: 640.0 articles/month
-- Sports: 455.8 articles/month
-- Business: 383.0 articles/month
-- Entertainment: 211.2 articles/month
-- Technology: 135.7 articles/month
+## Key Insights (Example, from Initial Analysis)
 
-## Key Insights
+This section would typically contain summaries of key findings from your analysis.
+*(Example from previous README, to be updated with insights from sentiment/topics)*
 
-1. **Content Focus**: Pakistan-related news dominates both sources, reflecting the domestic focus of these news outlets
-
-2. **Story Length Patterns**:
-   - Longer stories for political/domestic topics (Pakistan, Business)
-   - Shorter, more concise stories for Technology
-   - Relatively consistent length for Sports articles
-
-3. **Source Differences**:
-   - Dawn: More focused on serious news (Pakistan, World, Business)
-   - Tribune: Broader coverage including Entertainment and Technology
-
-4. **Temporal Trends**:
-   - Consistent high volume of Pakistan news throughout the period
-   - Sports coverage shows variability (likely tied to major sporting events)
-   - Relatively stable patterns for other categories
-
-5. **Data Quality**:
-   - Only 4 missing descriptions out of 138,664 articles (99.997% complete)
-   - 1,912 duplicate headlines (1.38%)
-   - 666 duplicate links (0.48%)
-
-## Files in This Project
-
-### Data Files
-- `combined_news_data.csv` - Initial combined dataset
-- `combined_news_data_cleaned.csv` - Cleaned dataset with category normalization
-
-### Scripts
-- `main.py` - Main script to load and display cleaned data
-- `data_preprocessing.py` - Initial data concatenation and preprocessing
-- `clean_categories.py` - Enhanced category cleaning and normalization
-- `visualizations.py` - Generate all three visualizations
-- `complete_analysis.py` - Complete end-to-end analysis pipeline
-- `analyze_data.py` - Initial data exploration script
-
-### Visualizations
-- `story_length_boxplot.png` - Story length distribution by category
-- `source_category_heatmap.png` - Source × Category crosstab heatmap
-- `temporal_trend_lineplot.png` - Monthly article count trends
-
-## Pipeline Stages
-
-### Stage 1: Ingestion (`src/ingest.py`)
-- Loads Dawn and Tribune CSV datasets
-- Removes unnecessary columns
-- Combines into single DataFrame
-- **Output**: Raw combined dataset (138,664 articles)
-
-### Stage 2: Preprocessing (`src/preprocess.py`)
-- Category normalization (558 → 53 categories)
-- Mappings:
-  - `Sport/sport/sports` → `Sports`
-  - `Tech` → `Technology`
-  - `Film/TV/Music/Gossip` → `Entertainment`
-  - Multi-categories → First category
-  - Long text (>50 chars) → `Unknown`
-- **Output**: Cleaned dataset with `category_clean` column
-
-### Stage 3: Visualization (`src/visualize.py`)
-- Filters to top 6 categories
-- Generates 3 visualizations:
-  1. Story Length by Category (Boxplot)
-  2. Source × Category Heatmap
-  3. Temporal Trend Line Plot
-- **Output**: PNG files in `outputs/figures/`
-
-## How to Run
-
-**Run the complete pipeline:**
-```bash
-python pipeline.py
-```
-
-This will execute all 3 stages and generate:
-- `combined_news_data_cleaned.csv` - Cleaned dataset
-- `outputs/figures/*.png` - All visualizations
-
-**Run individual stages:**
-```bash
-python -m src.ingest       # Stage 1 only
-python -m src.preprocess   # Stages 1-2
-python -m src.visualize    # Stages 1-3
-```
-
-## Installation
-
-1. **Clone or download this repository**
-
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-
-Or install manually:
-```bash
-pip install pandas numpy matplotlib seaborn
-```
-
-## Next Steps for Analysis
-- Text mining and NLP analysis on headlines/descriptions
-- Sentiment analysis by category
-- Topic modeling (LDA, NMF)
-- Classification models to predict categories
-- Named entity recognition for key figures/locations
-- Word clouds by category
-- N-gram analysis
+*   **Content Focus**: Pakistan-related news often dominates both sources.
+*   **Story Length Patterns**: Political/domestic topics tend to have longer stories, while technology might have shorter, more concise ones.
+*   **Source Differences**: One source might focus more on serious news, while another offers broader coverage including entertainment and technology.
+*   **Temporal Trends**: Observe how article counts for different categories change over time, potentially correlating with real-world events.
+*   **Sentiment Trends**: How does the sentiment of news change over time, or differ between sources/categories?
+*   **Discovered Topics**: What are the actual underlying themes and sub-topics discussed in the news, as revealed by BERTopic?

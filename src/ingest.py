@@ -21,14 +21,14 @@ def ingest_data():
 
     # Load Dawn dataset
     print("\n[1/3] Loading Dawn dataset...")
-    dawn_df = pd.read_csv(DAWN_CSV, encoding="latin-1", low_memory=False)
+    dawn_df = pd.read_csv(DAWN_CSV, encoding="latin-1", low_memory=False, on_bad_lines='skip')
     # Keep only meaningful columns
     dawn_df = dawn_df[['headline', 'date', 'link', 'source', 'categories', 'description']]
     print(f"  Dawn: {dawn_df.shape[0]:,} articles")
 
     # Load Tribune dataset
     print("\n[2/3] Loading Tribune dataset...")
-    tribune_df = pd.read_csv(TRIBUNE_CSV, encoding='latin-1', low_memory=False)
+    tribune_df = pd.read_csv(TRIBUNE_CSV, encoding='latin-1', low_memory=False, on_bad_lines='skip')
     print(f"  Tribune: {tribune_df.shape[0]:,} articles")
 
     # Concatenate

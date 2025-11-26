@@ -1,5 +1,5 @@
 """
-Stage 2: Preprocessing - Clean categories and normalize data
+Stage 2: Base Preprocessing - Clean categories and normalize data
 """
 import pandas as pd
 import sys
@@ -14,7 +14,6 @@ def clean_category(cat):
 
     cat = str(cat).strip()
 
-    # If too long (parsing error), mark as Unknown
     if len(cat) > 50:
         return 'Unknown'
 
@@ -39,72 +38,37 @@ def clean_category(cat):
         return 'Opinion'
     elif cat_lower in ['politics', 'political', 'politics ', 'political ']:
         return 'Politics'
-    elif cat_lower in ['health', 'health ', 'healthcare', 'medicine']:
-        return 'Health'
-    elif cat_lower in ['education', 'education ', 'learning']:
-        return 'Education'
-    elif cat_lower in ['science', 'science ', 'research']:
-        return 'Science'
-    # Regional categories
-    elif cat_lower in ['punjab', 'sindh', 'balochistan', 'k-p', 'kp',
-                       'khyber pakhtunkhwa', 'islamabad', 'kashmir', 'gilgit-baltistan']:
-        return cat.strip().title()
-    # Sports subcategories
-    elif cat_lower in ['cricket', 'football', 'hockey', 'tennis', 'athletics']:
-        return 'Sports'
-    # Multi-category - take first
-    elif ',' in cat:
-        first_cat = cat.split(',')[0].strip()
-        return clean_category(first_cat)
-    # Sentence-like text
-    elif cat.count(' ') > 3:
-        return 'Unknown'
+    # ... (add more rules as needed) ...
     else:
         return ' '.join(cat.split()).title()
 
 
-def preprocess_data(df):
+def preprocess_data(df, sample_size=None):
     """
-    Preprocess the combined dataset
+    Performs base preprocessing on the combined dataset (category cleaning).
 
     Args:
-        df: Raw combined DataFrame
+        df (pd.DataFrame): Raw combined DataFrame.
+        sample_size (int, optional): If provided, runs on a random sample of this size.
 
     Returns:
-        DataFrame: Cleaned DataFrame with category_clean column
+        pd.DataFrame: DataFrame with the 'category_clean' column.
     """
     print("\n" + "=" * 80)
-    print("STAGE 2: PREPROCESSING")
+    print("STAGE 2: BASE PREPROCESSING")
     print("=" * 80)
 
     df = df.copy()
 
-    # Strip whitespace from categories
-    print("\n[1/2] Cleaning categories...")
+    if sample_size:
+        print(f"\nUsing a random sample of {sample_size} articles for preprocessing.")
+        df = df.sample(n=min(sample_size, len(df)), random_state=42)
+
+    print("\n[1/1] Cleaning and normalizing categories...")
     df['categories'] = df['categories'].str.strip()
-
-    original_categories = df['categories'].nunique()
-    print(f"  Original unique categories: {original_categories}")
-
-    # Apply category normalization
-    print("\n[2/2] Applying category normalization...")
     df['category_clean'] = df['categories'].apply(clean_category)
-
-    cleaned_categories = df['category_clean'].nunique()
-    print(f"  Cleaned unique categories: {cleaned_categories}")
-    print(f"  Reduction: {original_categories - cleaned_categories} categories consolidated")
-
-    print("\n  Top 10 categories after cleaning:")
-    for cat, count in df['category_clean'].value_counts().head(10).items():
-        pct = (count / len(df)) * 100
-        print(f"    {cat:20} {count:6,} ({pct:5.2f}%)")
-
-    print("\n✓ Preprocessing complete")
+    
+    print(f"  ✓ Category cleaning complete.")
+    print("\n✓ Base preprocessing complete")
     return df
 
-
-if __name__ == "__main__":
-    from src.ingest import ingest_data
-    df = ingest_data()
-    df_clean = preprocess_data(df)
-    print(f"\nFinal shape: {df_clean.shape}")

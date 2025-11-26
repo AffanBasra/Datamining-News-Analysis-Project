@@ -132,13 +132,60 @@ def create_temporal_trend_lineplot(df_top):
     print(f"    ✓ Saved: {output_path}")
     plt.close()
 
+def create_sentiment_distribution_plot(df_top):
+    """New: Sentiment Polarity Distribution"""
+    print("\n  [4/5] Creating Sentiment Polarity Distribution Plot...")
+
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df_top['sentiment_polarity'], kde=True, bins=50, color='skyblue')
+    plt.title('Distribution of Sentiment Polarity', fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('Sentiment Polarity (-1.0: Negative, 1.0: Positive)', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Articles', fontsize=12, fontweight='bold')
+    plt.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    output_path = Path(FIGURES_DIR) / "sentiment_polarity_distribution.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"    ✓ Saved: {output_path}")
+    plt.close()
+
+def create_average_sentiment_by_category_source(df_top):
+    """New: Average Sentiment Polarity by Category and Source"""
+    print("\n  [5/5] Creating Average Sentiment by Category and Source Plots...")
+
+    # Average sentiment by category
+    avg_sentiment_cat = df_top.groupby('category_clean')['sentiment_polarity'].mean().sort_values()
+    plt.figure(figsize=(12, 7))
+    sns.barplot(x=avg_sentiment_cat.index, y=avg_sentiment_cat.values, palette='viridis')
+    plt.title('Average Sentiment Polarity by Category', fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('Category', fontsize=12, fontweight='bold')
+    plt.ylabel('Average Sentiment Polarity', fontsize=12, fontweight='bold')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    output_path_cat = Path(FIGURES_DIR) / "avg_sentiment_by_category.png"
+    plt.savefig(output_path_cat, dpi=300, bbox_inches='tight')
+    print(f"    ✓ Saved: {output_path_cat}")
+    plt.close()
+
+    # Average sentiment by source
+    avg_sentiment_source = df_top.groupby('source')['sentiment_polarity'].mean().sort_values()
+    plt.figure(figsize=(8, 5))
+    sns.barplot(x=avg_sentiment_source.index, y=avg_sentiment_source.values, palette='magma')
+    plt.title('Average Sentiment Polarity by Source', fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('Source', fontsize=12, fontweight='bold')
+    plt.ylabel('Average Sentiment Polarity', fontsize=12, fontweight='bold')
+    plt.tight_layout()
+    output_path_source = Path(FIGURES_DIR) / "avg_sentiment_by_source.png"
+    plt.savefig(output_path_source, dpi=300, bbox_inches='tight')
+    print(f"    ✓ Saved: {output_path_source}")
+    plt.close()
+
 
 def visualize_data(df):
     """
     Generate all visualizations
 
     Args:
-        df: Cleaned DataFrame with category_clean column
+        df: Cleaned DataFrame with category_clean and sentiment_polarity columns
     """
     print("\n" + "=" * 80)
     print("STAGE 3: VISUALIZATION")
@@ -153,6 +200,8 @@ def visualize_data(df):
     create_story_length_boxplot(df_top)
     create_source_category_heatmap(df_top)
     create_temporal_trend_lineplot(df_top)
+    create_sentiment_distribution_plot(df_top)
+    create_average_sentiment_by_category_source(df_top)
 
     print("\n✓ Visualization complete")
 
@@ -164,3 +213,4 @@ if __name__ == "__main__":
     df = ingest_data()
     df_clean = preprocess_data(df)
     visualize_data(df_clean)
+
