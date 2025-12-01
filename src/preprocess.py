@@ -3,6 +3,7 @@ Stage 2: Base Preprocessing - Clean categories and normalize data
 """
 import pandas as pd
 import sys
+import re
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -43,16 +44,36 @@ def clean_category(cat):
         return ' '.join(cat.split()).title()
 
 
+def clean_text(text):
+    """
+    Performs basic text cleaning.
+    - Removes HTML tags
+    - Converts to lowercase
+    - Removes special characters (keeps letters, numbers, and spaces)
+    """
+    if not isinstance(text, str):
+        return ""
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+    # Convert to lowercase
+    text = text.lower()
+    # Remove special characters
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    return text
+
+
 def preprocess_data(df, sample_size=None):
     """
-    Performs base preprocessing on the combined dataset (category cleaning).
+    Performs base preprocessing on the combined dataset.
+    - Cleans categories
+    - Cleans description text for topic modeling
 
     Args:
         df (pd.DataFrame): Raw combined DataFrame.
         sample_size (int, optional): If provided, runs on a random sample of this size.
 
     Returns:
-        pd.DataFrame: DataFrame with the 'category_clean' column.
+        pd.DataFrame: DataFrame with 'category_clean' and 'description_clean' columns.
     """
     print("\n" + "=" * 80)
     print("STAGE 2: BASE PREPROCESSING")
@@ -64,11 +85,15 @@ def preprocess_data(df, sample_size=None):
         print(f"\nUsing a random sample of {sample_size} articles for preprocessing.")
         df = df.sample(n=min(sample_size, len(df)), random_state=42)
 
-    print("\n[1/1] Cleaning and normalizing categories...")
+    print("\n[1/2] Cleaning and normalizing categories...")
     df['categories'] = df['categories'].str.strip()
     df['category_clean'] = df['categories'].apply(clean_category)
-    
     print(f"  ✓ Category cleaning complete.")
+
+    print("\n[2/2] Performing basic text cleaning for topic modeling...")
+    df['description_clean'] = df['description'].apply(clean_text)
+    print(f"  ✓ Text cleaning complete.")
+    
     print("\n✓ Base preprocessing complete")
     return df
 

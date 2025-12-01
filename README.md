@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-News-Lens is a modular and extensible data pipeline designed for in-depth analysis of news articles. Initially developed for Pakistani news sources (Dawn and Tribune), it aims to uncover hidden insights by processing raw news data through various stages, including advanced natural language processing techniques like sentiment analysis and topic modeling.
+News-Lens is a modular and extensible data pipeline designed for in-depth analysis of news articles. Initially developed for Pakistani news sources (Dawn and Tribune), it aims to uncover hidden insights by processing raw news data through various stages, including advanced natural language processing techniques like sentiment analysis, topic modeling, and named entity recognition.
 
-This tool is built with a journalist's perspective in mind, allowing the analysis of new, unseen news sources to understand their editorial focus, sentiment, and key themes, potentially revealing biases or unique coverages compared to a baseline.
+This tool is built with a journalist's perspective in mind, allowing the analysis of new, unseen news sources to understand their editorial focus, sentiment, key themes, and mentioned entities, potentially revealing biases or unique coverages compared to a baseline.
 
 ## Features
 
@@ -12,10 +12,11 @@ This tool is built with a journalist's perspective in mind, allowing the analysi
 *   **Base Preprocessing:** Cleans and normalizes article categories for consistent analysis.
 *   **Sentiment Analysis:** Utilizes state-of-the-art Flair models to determine the emotional tone (polarity) of news descriptions. Highly optimized for GPU usage.
 *   **Topic Modeling:** Employs BERTopic to automatically discover and visualize latent topics and themes within the news content.
+*   **Named Entity Recognition (NER):** Uses spaCy to identify and extract named entities (e.g., people, organizations, locations) from the news articles.
 *   **Intelligent Caching:** Skips time-consuming reprocessing steps if intermediate results are already available, significantly speeding up subsequent runs.
-*   **Modular Design:** Each stage (ingestion, preprocessing, sentiment, topic modeling) is a separate, reusable component.
+*   **Modular Design:** Each stage (ingestion, preprocessing, sentiment, topic modeling, NER) is a separate, reusable component.
 *   **Granular Control:** Offers fine-grained control over which analysis steps to run via command-line flags.
-*   **Comprehensive Visualizations:** Generates various charts and interactive reports for key insights into story length, source/category distribution, temporal trends, sentiment, and discovered topics.
+*   **Comprehensive Visualizations:** Generates various charts and interactive reports for key insights into story length, source/category distribution, temporal trends, sentiment, discovered topics, and named entities.
 
 ## Project Structure
 
@@ -45,6 +46,7 @@ This tool is built with a journalist's perspective in mind, allowing the analysi
 │   ├── preprocess.py           # Stage 2: Base preprocessing (category cleaning)
 │   ├── sentiment_analysis.py   # Module for Flair-based sentiment analysis
 │   ├── topic_modeling.py       # Module for BERTopic-based topic modeling
+│   ├── ner.py                  # Module for spaCy-based Named Entity Recognition
 │   └── visualize.py            # Stage 3: Visualization generation
 └── data/                       # Directory for raw data files
     └── raw/                    # Subdirectory for raw input CSVs (Dawn and Tribune)
@@ -80,7 +82,7 @@ This tool is built with a journalist's perspective in mind, allowing the analysi
     ```bash
     pip install -r requirements.txt
     ```
-    This will install `flair`, `bertopic`, pandas, and other libraries.
+    This will install `flair`, `bertopic`, `spacy`, pandas, and other libraries.
 
 ## How to Run the Pipeline
 
@@ -88,7 +90,7 @@ The `pipeline.py` script is the main entry point and offers flexible execution o
 
 **Basic Usage:**
 
-*   **Run with default settings (loads from cache, runs sentiment if missing, skips topics):**
+*   **Run with default settings (loads from cache, runs sentiment if missing, skips topics and NER):**
     ```bash
     python pipeline.py
     ```
@@ -115,21 +117,26 @@ The `pipeline.py` script is the main entry point and offers flexible execution o
     python pipeline.py --run_topic_modeling
     ```
 
-*   **Combine flags (e.g., re-run sentiment and run topics on a sample):**
+*   **Run Named Entity Recognition (this is also skipped by default):**
     ```bash
-    python pipeline.py --sample_size 10000 --force_reprocess_sentiment --run_topic_modeling
+    python pipeline.py --run_ner
+    ```
+
+*   **Combine flags (e.g., re-run sentiment, run topics, and run NER on a sample):**
+    ```bash
+    python pipeline.py --sample_size 10000 --force_reprocess_sentiment --run_topic_modeling --run_ner
     ```
 
 *   **To run everything from scratch on a full dataset:**
     ```bash
-    python pipeline.py --force_reprocess_base --force_reprocess_sentiment --run_topic_modeling
+    python pipeline.py --force_reprocess_base --force_reprocess_sentiment --run_topic_modeling --run_ner
     ```
 
 ## Outputs
 
 The pipeline generates the following:
 
-*   **Processed Data:** A CSV file (`combined_news_data_cleaned.csv` or `combined_news_data_cleaned_sample_XXXX.csv`) in the root directory containing the enriched dataset with cleaned categories, sentiment polarity, and topic assignments (if run).
+*   **Processed Data:** A CSV file (`combined_news_data_cleaned.csv` or `combined_news_data_cleaned_sample_XXXX.csv`) in the root directory containing the enriched dataset with cleaned categories, sentiment polarity, topic assignments, and named entities (if run).
 *   **Visualization Figures:** PNG images in the `outputs/figures/` directory, including:
     *   `story_length_boxplot.png`
     *   `source_category_heatmap.png`
@@ -137,6 +144,8 @@ The pipeline generates the following:
     *   `sentiment_polarity_distribution.png`
     *   `avg_sentiment_by_category.png`
     *   `avg_sentiment_by_source.png`
+    *   `ner_label_barchart.png`
+    *   `ner_wordcloud.png`
 *   **Topic Modeling Reports:** Interactive HTML files and the trained BERTopic model in the `outputs/topic_modeling/` directory, including:
     *   `bertopic_model` (saved BERTopic model)
     *   `bertopic_topics_2d.html` (interactive 2D topic map)
@@ -145,7 +154,7 @@ The pipeline generates the following:
 ## Key Insights (Example, from Initial Analysis)
 
 This section would typically contain summaries of key findings from your analysis.
-*(Example from previous README, to be updated with insights from sentiment/topics)*
+*(Example from previous README, to be updated with insights from sentiment/topics/NER)*
 
 *   **Content Focus**: Pakistan-related news often dominates both sources.
 *   **Story Length Patterns**: Political/domestic topics tend to have longer stories, while technology might have shorter, more concise ones.
@@ -153,3 +162,4 @@ This section would typically contain summaries of key findings from your analysi
 *   **Temporal Trends**: Observe how article counts for different categories change over time, potentially correlating with real-world events.
 *   **Sentiment Trends**: How does the sentiment of news change over time, or differ between sources/categories?
 *   **Discovered Topics**: What are the actual underlying themes and sub-topics discussed in the news, as revealed by BERTopic?
+*   **Key Entities**: What are the most frequently mentioned people, organizations, and locations in the news?

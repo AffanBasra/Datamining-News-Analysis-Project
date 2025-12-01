@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 from pathlib import Path
+from collections import Counter
+from wordcloud import WordCloud
+import ast
 from src.config import TOP_CATEGORIES, FIGURES_DIR
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -180,6 +183,79 @@ def create_average_sentiment_by_category_source(df_top):
     plt.close()
 
 
+def create_ner_label_barchart(df):
+    """Create a bar chart of NER label frequencies."""
+    print("\n  [6/7] Creating NER Label Frequency Barchart...")
+    try:
+        # The 'entities' column may be a string representation of a list
+        if isinstance(df['entities'].iloc[0], str):
+            all_entities = df['entities'].apply(ast.literal_eval).sum()
+        else:
+            all_entities = df['entities'].sum()
+        
+        if not all_entities:
+            print("    ! No entities found. Skipping NER barchart.")
+            return
+
+        labels = [ent[3] for ent in all_entities]
+        label_counts = Counter(labels)
+        
+        if not label_counts:
+            print("    ! No entity labels found. Skipping NER barchart.")
+            return
+
+        plt.figure(figsize=(12, 7))
+        sns.barplot(x=list(label_counts.keys()), y=list(label_counts.values()), palette='mako')
+        plt.title('Frequency of Named Entity Types', fontsize=14, fontweight='bold', pad=20)
+        plt.xlabel('Entity Type', fontsize=12, fontweight='bold')
+        plt.ylabel('Count', fontsize=12, fontweight='bold')
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        output_path = Path(FIGURES_DIR) / "ner_label_barchart.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    ✓ Saved: {output_path}")
+        plt.close()
+
+    except Exception as e:
+        print(f"    ! Error creating NER barchart: {e}")
+
+
+def create_ner_wordcloud(df):
+    """Create a word cloud of the most frequent entities."""
+    print("\n  [7/7] Creating NER Word Cloud...")
+    try:
+        # The 'entities' column may be a string representation of a list
+        if isinstance(df['entities'].iloc[0], str):
+            all_entities = df['entities'].apply(ast.literal_eval).sum()
+        else:
+            all_entities = df['entities'].sum()
+
+        if not all_entities:
+            print("    ! No entities found. Skipping NER wordcloud.")
+            return
+
+        entity_texts = [ent[0] for ent in all_entities if ent[3] in ['PERSON', 'ORG', 'GPE']]
+        
+        if not entity_texts:
+            print("    ! No PERSON, ORG, or GPE entities found. Skipping NER wordcloud.")
+            return
+
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(entity_texts))
+
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis('off')
+        plt.title('Most Frequent Named Entities (PERSON, ORG, GPE)', fontsize=14, fontweight='bold', pad=20)
+        plt.tight_layout()
+        output_path = Path(FIGURES_DIR) / "ner_wordcloud.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"    ✓ Saved: {output_path}")
+        plt.close()
+    
+    except Exception as e:
+        print(f"    ! Error creating NER wordcloud: {e}")
+
+
 def visualize_data(df):
     """
     Generate all visualizations
@@ -202,6 +278,10 @@ def visualize_data(df):
     create_temporal_trend_lineplot(df_top)
     create_sentiment_distribution_plot(df_top)
     create_average_sentiment_by_category_source(df_top)
+    
+    if 'entities' in df.columns:
+        create_ner_label_barchart(df)
+        create_ner_wordcloud(df)
 
     print("\n✓ Visualization complete")
 

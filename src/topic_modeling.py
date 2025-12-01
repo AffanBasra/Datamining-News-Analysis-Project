@@ -7,7 +7,7 @@ from pathlib import Path
 
 def model_topics(df, output_dir):
     """
-    Performs topic modeling on the 'description' column of the DataFrame.
+    Performs topic modeling on the 'description_clean' column of the DataFrame.
 
     Args:
         df (pd.DataFrame): The input DataFrame.
@@ -23,9 +23,9 @@ def model_topics(df, output_dir):
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # --- Data Preparation ---
-    df_topics = df.dropna(subset=['description']).copy()
-    df_topics = df_topics[df_topics['description'].str.strip() != ''].copy()
-    documents = df_topics['description'].tolist()
+    df_topics = df.dropna(subset=['description_clean']).copy()
+    df_topics = df_topics[df_topics['description_clean'].str.strip() != ''].copy()
+    documents = df_topics['description_clean'].tolist()
     print(f"  Filtered to {len(documents):,} articles with valid descriptions for topic modeling.")
 
     # --- Model Training ---
