@@ -18,6 +18,10 @@ DataMiningProject/
 │   ├── config.py                      # Configuration settings
 │   ├── ingest.py                      # Stage 1: Data ingestion
 │   ├── preprocess.py                  # Stage 2: Preprocessing
+│   ├── sentiment_analysis.py          # Sentiment analysis module
+│   ├── topic_modeling.py              # BERTopic modeling module
+│   ├── topic_modeling_word2vec.py     # Word2Vec (CBOW/Skip-gram) topic modeling module
+│   ├── ner.py                         # Named Entity Recognition module
 │   └── visualize.py                   # Stage 3: Visualization
 │
 ├── data/                              # Data directories

@@ -235,7 +235,7 @@ def create_ner_wordcloud(df):
             return
 
         entity_texts = [ent[0] for ent in all_entities if ent[3] in ['PERSON', 'ORG', 'GPE']]
-        
+
         if not entity_texts:
             print("    ! No PERSON, ORG, or GPE entities found. Skipping NER wordcloud.")
             return
@@ -251,17 +251,225 @@ def create_ner_wordcloud(df):
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"    ✓ Saved: {output_path}")
         plt.close()
-    
+
     except Exception as e:
         print(f"    ! Error creating NER wordcloud: {e}")
 
 
-def visualize_data(df):
+def create_word2vec_topic_distribution(df):
+    """Create visualization for Word2Vec topic distribution."""
+    # Check for both possible column names (CBOW and Skip-gram)
+    topic_col = None
+    model_type = ''
+    if 'word2vec_topic' in df.columns:
+        topic_col = 'word2vec_topic'
+        model_type = 'CBOW'
+    elif 'word2vec_skipgram_topic' in df.columns:
+        topic_col = 'word2vec_skipgram_topic'
+        model_type = 'Skip-gram'
+
+    if topic_col is None:
+        print("\n  [8/8] Skipping Word2Vec topic distribution visualization (column not found)...")
+        return
+
+    print(f"\n  [8/8] Creating Word2Vec {model_type} Topic Distribution Plot...")
+
+    # Count articles per topic
+    topic_counts = df[topic_col].value_counts().sort_index()
+
+    plt.figure(figsize=(12, 7))
+    bars = plt.bar(range(len(topic_counts)), topic_counts.values, color='skyblue', edgecolor='navy', linewidth=0.5)
+    plt.title(f'Distribution of Articles Across Word2Vec {model_type} Topics', fontsize=14, fontweight='bold', pad=20)
+    plt.xlabel('Topic ID', fontsize=12, fontweight='bold')
+    plt.ylabel('Number of Articles', fontsize=12, fontweight='bold')
+    plt.xticks(range(len(topic_counts)), [f'Topic {i}' for i in topic_counts.index], rotation=45, ha='right')
+
+    # Add count labels on bars
+    for bar, count in zip(bars, topic_counts.values):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + count*0.01,
+                 str(count), ha='center', va='bottom', fontsize=9)
+
+    plt.tight_layout()
+    output_path = Path(FIGURES_DIR) / f"word2vec_{model_type.lower()}_topic_distribution.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"    ✓ Saved: {output_path}")
+    plt.close()
+
+
+def create_word2vec_topic_barcharts(df):
+    """Create a single visualization with multiple subplots showing top terms for each Word2Vec topic."""
+    # Try to get topic info, assuming it's saved in the outputs directory
+    # For now, we'll create a simpler approach by looking for topic name columns
+    topic_name_col = None
+    topic_col = None
+    model_type = ''
+
+    if 'word2vec_topic_name' in df.columns:
+        topic_name_col = 'word2vec_topic_name'
+        topic_col = 'word2vec_topic'
+        model_type = 'CBOW'
+    elif 'word2vec_skipgram_topic_name' in df.columns:
+        topic_name_col = 'word2vec_skipgram_topic_name'
+        topic_col = 'word2vec_skipgram_topic'
+        model_type = 'Skip-gram'
+
+    if topic_col is None:
+        print("\n  [9/9] Skipping Word2Vec topic barcharts visualization (column not found)...")
+        return
+
+    print(f"\n  [9/9] Creating Word2Vec {model_type} Topic Barcharts...")
+
+    try:
+        # Get unique topics
+        unique_topics = sorted(df[topic_col].unique())
+        n_topics = len(unique_topics)
+
+        if n_topics == 0:
+            print("    ! No topics found for visualization.")
+            return
+
+        # Determine subplot layout based on number of topics
+        cols = min(2, n_topics)  # Max 2 columns
+        rows = (n_topics + cols - 1) // cols  # Calculate rows needed
+
+        # Create figure with subplots
+        fig, axes = plt.subplots(rows, cols, figsize=(16, 4 * rows))
+        if n_topics == 1:
+            axes = [axes]
+        elif n_topics > 1:
+            axes = axes.flatten() if n_topics > 1 else [axes]
+
+        # Create a subplot for each topic
+        for i, topic_id in enumerate(unique_topics):
+            topic_df = df[df[topic_col] == topic_id]
+            if len(topic_df) > 0:
+                # Use the topic name to get sample terms (from topic_name column)
+                topic_name = topic_df.iloc[0][topic_name_col] if topic_name_col in df.columns else f"Topic {topic_id}"
+                top_terms = [term.strip() for term in topic_name.split(',')[:10]]  # Get top 10 terms
+
+                if len(top_terms) > 0:
+                    # Create a horizontal bar chart for this topic
+                    y_pos = range(len(top_terms))
+                    # Using dummy values as we don't have actual term frequencies
+                    values = list(range(len(top_terms), 0, -1))  # Decreasing values for better visualization
+                    bars = axes[i].barh(y_pos, values, color='lightblue', edgecolor='navy')
+                    axes[i].set_yticks(y_pos)
+                    axes[i].set_yticklabels(top_terms)
+                    axes[i].set_xlabel('Term Importance')
+                    axes[i].set_title(f'Topic {topic_id}: {", ".join(top_terms[:3])}...', fontsize=10)
+
+                    # Add value labels on bars
+                    for bar, value in zip(bars, values):
+                        axes[i].text(bar.get_width() * 0.5, bar.get_y() + bar.get_height()/2,
+                                   str(value), ha='center', va='center', fontsize=8)
+
+        # Hide unused subplots
+        for i in range(n_topics, len(axes)):
+            axes[i].set_visible(False)
+
+        plt.suptitle(f'Top Terms in Word2Vec {model_type} Topics', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+
+        output_path = Path(FIGURES_DIR) / f"word2vec_{model_type.lower()}_all_topics_barchart.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"    ✓ Saved: {output_path}")
+
+    except Exception as e:
+        print(f"    ! Error creating topic barcharts: {e}")
+
+
+def create_word2vec_wordclouds(df):
+    """Create a single visualization with word clouds for each Word2Vec topic."""
+    topic_name_col = None
+    topic_col = None
+    model_type = ''
+
+    if 'word2vec_topic_name' in df.columns:
+        topic_name_col = 'word2vec_topic_name'
+        topic_col = 'word2vec_topic'
+        model_type = 'CBOW'
+    elif 'word2vec_skipgram_topic_name' in df.columns:
+        topic_name_col = 'word2vec_skipgram_topic_name'
+        topic_col = 'word2vec_skipgram_topic'
+        model_type = 'Skip-gram'
+
+    if topic_col is None:
+        print("\n  [10/10] Skipping Word2Vec word clouds visualization (column not found)...")
+        return
+
+    print(f"\n  [10/10] Creating Word2Vec {model_type} Topic Word Clouds...")
+
+    try:
+        # Get unique topics
+        unique_topics = sorted(df[topic_col].unique())
+        n_topics = len(unique_topics)
+
+        if n_topics == 0:
+            print("    ! No topics found for visualization.")
+            return
+
+        # Determine subplot layout based on number of topics
+        cols = min(2, n_topics)  # Max 2 columns
+        rows = (n_topics + cols - 1) // cols  # Calculate rows needed
+
+        # Create figure with subplots
+        fig, axes = plt.subplots(rows, cols, figsize=(16, 8 * rows))
+        if n_topics == 1:
+            axes = [axes]
+        elif n_topics > 1:
+            axes = axes.flatten() if n_topics > 1 else [axes]
+
+        # Create a word cloud subplot for each topic
+        for i, topic_id in enumerate(unique_topics):
+            topic_df = df[df[topic_col] == topic_id]
+            if len(topic_df) > 0:
+                # Use the topic name to get sample terms
+                topic_name = topic_df.iloc[0][topic_name_col] if topic_name_col in df.columns else f"Topic {topic_id}"
+                top_terms = [term.strip() for term in topic_name.split(',')[:15]]  # Get top 15 terms
+
+                if len(top_terms) > 0:
+                    # Create text for the word cloud (repeat terms to show importance)
+                    text = ' '.join(top_terms * 3)  # Repeat to make more visible
+
+                    # Create word cloud
+                    wordcloud = WordCloud(
+                        width=800,
+                        height=400,
+                        background_color='white',
+                        colormap='viridis',
+                        max_words=20,
+                        relative_scaling=0.5
+                    ).generate(text)
+
+                    # Display word cloud in subplot
+                    axes[i].imshow(wordcloud, interpolation='bilinear')
+                    axes[i].axis('off')
+                    axes[i].set_title(f'Topic {topic_id}: {", ".join(top_terms[:3])}...', fontsize=12, fontweight='bold')
+
+        # Hide unused subplots
+        for i in range(n_topics, len(axes)):
+            axes[i].set_visible(False)
+
+        plt.suptitle(f'Word2Vec {model_type} Topic Word Clouds', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+
+        output_path = Path(FIGURES_DIR) / f"word2vec_{model_type.lower()}_all_topics_wordcloud.png"
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"    ✓ Saved: {output_path}")
+
+    except Exception as e:
+        print(f"    ! Error creating topic word clouds: {e}")
+
+
+def visualize_data(df, run_ner=False):
     """
     Generate all visualizations
 
     Args:
         df: Cleaned DataFrame with category_clean and sentiment_polarity columns
+        run_ner (bool): Whether NER analysis was run
     """
     print("\n" + "=" * 80)
     print("STAGE 3: VISUALIZATION")
@@ -278,10 +486,20 @@ def visualize_data(df):
     create_temporal_trend_lineplot(df_top)
     create_sentiment_distribution_plot(df_top)
     create_average_sentiment_by_category_source(df_top)
-    
-    if 'entities' in df.columns:
+
+    if run_ner and 'entities' in df.columns:
+        print("\n[NER Visualizations] Creating NER visualizations...")
         create_ner_label_barchart(df)
         create_ner_wordcloud(df)
+    elif run_ner and 'entities' not in df.columns:
+        print("\n[NER Visualizations] Warning: NER was requested but entities column not found...")
+    else:
+        print("\n[NER Visualizations] Skipping NER visualizations (NER not requested)...")
+
+    # Create Word2Vec topic visualization if available
+    create_word2vec_topic_distribution(df)
+    create_word2vec_topic_barcharts(df)
+    create_word2vec_wordclouds(df)
 
     print("\n✓ Visualization complete")
 
@@ -292,5 +510,5 @@ if __name__ == "__main__":
 
     df = ingest_data()
     df_clean = preprocess_data(df)
-    visualize_data(df_clean)
+    visualize_data(df_clean, run_ner=False)
 

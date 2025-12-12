@@ -17,6 +17,7 @@ This tool is built with a journalist's perspective in mind, allowing the analysi
 *   **Modular Design:** Each stage (ingestion, preprocessing, sentiment, topic modeling, NER) is a separate, reusable component.
 *   **Granular Control:** Offers fine-grained control over which analysis steps to run via command-line flags.
 *   **Comprehensive Visualizations:** Generates various charts and interactive reports for key insights into story length, source/category distribution, temporal trends, sentiment, discovered topics, and named entities.
+*   **Multiple Topic Modeling Approaches:** Supports both BERTopic and Word2Vec (CBOW/Skip-gram) topic modeling techniques for comparative analysis.
 
 ## Project Structure
 
@@ -46,6 +47,7 @@ This tool is built with a journalist's perspective in mind, allowing the analysi
 │   ├── preprocess.py           # Stage 2: Base preprocessing (category cleaning)
 │   ├── sentiment_analysis.py   # Module for Flair-based sentiment analysis
 │   ├── topic_modeling.py       # Module for BERTopic-based topic modeling
+│   ├── topic_modeling_word2vec.py # Module for Word2Vec (CBOW/Skip-gram) topic modeling
 │   ├── ner.py                  # Module for spaCy-based Named Entity Recognition
 │   └── visualize.py            # Stage 3: Visualization generation
 └── data/                       # Directory for raw data files
@@ -120,6 +122,16 @@ The `pipeline.py` script is the main entry point and offers flexible execution o
 *   **Run Named Entity Recognition (this is also skipped by default):**
     ```bash
     python pipeline.py --run_ner
+    ```
+
+*   **Run Word2Vec topic modeling using CBOW:**
+    ```bash
+    python pipeline.py --run_word2vec_topic_modeling
+    ```
+
+*   **Run Word2Vec topic modeling using Skip-gram:**
+    ```bash
+    python pipeline.py --run_word2vec_topic_modeling --word2vec_model_type skipgram
     ```
 
 *   **Combine flags (e.g., re-run sentiment, run topics, and run NER on a sample):**
